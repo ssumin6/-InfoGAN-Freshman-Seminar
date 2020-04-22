@@ -1,7 +1,8 @@
 # InfoGAN-freshman seminar
+We're gonna use MNIST dataset to reproduce the paper!
 
 ## Usage
-Edit the **`config.py`** file to select training parameters and the dataset to use. We use MNIST.
+Edit the **`config.py`** file to select training parameters.
 
 To train the model run **`train.py`**:
 ```sh
