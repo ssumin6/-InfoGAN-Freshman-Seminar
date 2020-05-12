@@ -47,11 +47,11 @@ plt.savefig('Training Images {}'.format(params['dataset']))
 plt.close('all')
 
 # Initialise the network.
-netG = Generator(device).to(device)
+netG = Generator().to(device)
 netG.apply(weights_init)
 print(netG)
 
-discriminator = Discriminator(device).to(device)
+discriminator = Discriminator().to(device)
 discriminator.apply(weights_init)
 print(discriminator)
 

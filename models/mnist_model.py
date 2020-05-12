@@ -7,62 +7,55 @@ Architecture based on InfoGAN paper.
 """
 
 class Generator(nn.Module):
-    def __init__(self, device):
+    def __init__(self):
         super().__init__()
         self.zsize = 74
-        self.device = device
-        self.linear = nn.Sequential(
+        self.network = nn.Sequential(
             # FC. 1024 RELU. batchnorm
-            nn.Linear(self.zsize, 1024, bias=False),
+            nn.ConvTranspose2d(self.zsize, 1024, 1, 1, bias=False),
+            nn.BatchNorm2d(1024),
             nn.ReLU(True),
-            nn.BatchNorm1d(1024),
             # FC. 7x7x128 RELU. batchnorm
-            nn.Linear(1024, 7*7*128, bias=False),
+            nn.Linear(1024, 128, 7, 1, bias=False),
+            nn.BatchNorm2d(7*7*128),
+            nn.ReLU(True), 
+            # 4x4 upconv, 64 RELU, stride 2. batchnorm. 1 padding for 28x28 restoration.
+            nn.ConvTranspose2d(128, 64, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(64),
             nn.ReLU(True),
-            nn.BatchNorm1d(7*7*128)
+            # 4x4 upconv. 1 channel.
+            nn.ConvTranspose2d(64, 1, 4, bias=False),
+            nn.Sigmoid()
         )
-        self.transconv1 = nn.ConvTranspose2d(128, 64, 4, 2, bias=False)
-        self.batchnorm = nn.BatchNorm2d(64)
-        self.transconv2 = nn.ConvTranspose2d(64, 1, 4, bias=False)
 
     def forward(self, x):
-        x = x.view(-1, self.zsize)
-        img = self.linear(x)
-        # resize the tensor into shape [batch_size, 7, 7, 128]
-        img = img.view(-1, 128, 7, 7)
-        # 4x4 upconv, 64 RELU, stride 2. batchnorm.
-        img = self.batchnorm(F.relu(self.transconv1(img)))
-        # 4x4 upconv. 1 channel.
-        img = torch.sigmoid(self.transconv2(img))
+        img = self.network(x)
         return img
 
 class Discriminator(nn.Module):
-    def __init__(self, device):
+    def __init__(self):
         super().__init__()
         self.nchannels = 1
-        self.device = device
         self.convs = nn.Sequential(
             # 4x4 conv. 64 lRELU. stride 2
-            nn.Conv2d(self.nchannels, 64, 4, stride=2, bias=False),
-            nn.LeakyReLU(0.1, inplace=True),
+            nn.Conv2d(self.nchannels, 64, 4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
-            # 4x4 conv. 128 lRELU. stride 2. batchnorm
-            nn.Conv2d(64, 128, 4, stride=2, bias=False),
             nn.LeakyReLU(0.1, inplace=True),
-            nn.BatchNorm2d(128)
+            # 4x4 conv. 128 lRELU. stride 2. batchnorm
+            nn.Conv2d(64, 128, 4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.1, inplace=True),
+            # FC. 1024 lRELU. batchnorm.
+            nn.Conv2d(128, 1024, 7, 1, bias=True)
+            nn.BatchNorm2d(1024),
+            nn.LeakyReLU(0.1, inplace=True)
         )
-        self.batchnorm = nn.BatchNorm1d(1024)
         
     def forward(self, x):
         # Input x : 28x28 Gray image.
         x = self.convs(x)
         # flatten x
-        shape = list(x.size())
-        flatten_shape = shape[1]*shape[2]*shape[3]
-        x = x.view(-1, flatten_shape)
-        # FC. 1024 lRELU. batchnorm.
-        fc = nn.Linear(flatten_shape, 1024, bias=False).to(self.device)
-        x = self.batchnorm(F.leaky_relu(fc(x), 0.1))
+        x = x.view(-1, 1024)
         return x
 
 class DHead(nn.Module):
@@ -70,9 +63,8 @@ class DHead(nn.Module):
         super().__init__()
         # output channel would be 1
         # FC output layer for D
-
         self.device = device
-        self.fc = nn.Linear(1024, 1, bias=False).to(device)
+        self.fc = nn.Linear(1024, 1).to(device)
 
     def forward(self, x):
         # output channel would be 1
@@ -90,9 +82,9 @@ class QHead(nn.Module):
             nn.LeakyReLU(0.1, inplace=True)
         )
         self.device = device
-        self.fcmu = nn.Linear(128, 2, bias=False).to(device)
-        self.fcvar = nn.Linear(128, 2, bias=False).to(device)
-        self.fclogits = nn.Linear(128, 10, bias=False).to(device)
+        self.fcmu = nn.Linear(128, 2).to(device)
+        self.fcvar = nn.Linear(128, 2).to(device)
+        self.fclogits = nn.Linear(128, 10).to(device)
         
 
 
