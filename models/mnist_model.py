@@ -7,9 +7,10 @@ Architecture based on InfoGAN paper.
 """
 
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super().__init__()
         self.zsize = 74
+        self.device = device
         self.linear = nn.Sequential(
             # FC. 1024 RELU. batchnorm
             nn.Linear(self.zsize, 1024, bias=False),
@@ -36,9 +37,10 @@ class Generator(nn.Module):
         return img
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super().__init__()
         self.nchannels = 1
+        self.device = device
         self.convs = nn.Sequential(
             # 4x4 conv. 64 lRELU. stride 2
             nn.Conv2d(self.nchannels, 64, 4, stride=2, bias=False),
@@ -59,16 +61,18 @@ class Discriminator(nn.Module):
         flatten_shape = shape[1]*shape[2]*shape[3]
         x = x.view(-1, flatten_shape)
         # FC. 1024 lRELU. batchnorm.
-        fc = nn.Linear(flatten_shape, 1024, bias=False)
+        fc = nn.Linear(flatten_shape, 1024, bias=False).to(self.device)
         x = self.batchnorm(F.leaky_relu(fc(x), 0.1))
         return x
 
 class DHead(nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super().__init__()
         # output channel would be 1
         # FC output layer for D
-        self.fc = nn.Linear(1024, 1, bias=False)
+
+        self.device = device
+        self.fc = nn.Linear(1024, 1, bias=False).to(device)
 
     def forward(self, x):
         # output channel would be 1
@@ -76,7 +80,7 @@ class DHead(nn.Module):
         return output
 
 class QHead(nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super().__init__()
         # FC.128 - batchnorm - 1RELU - FC.output for Q
         # output channel would be 10, 2, 2 for disc, mu, var
@@ -85,15 +89,15 @@ class QHead(nn.Module):
             nn.BatchNorm1d(128),
             nn.LeakyReLU(0.1, inplace=True)
         )
-        self.fcmu = nn.Linear(128, 2, bias=False)
-        self.fcvar = nn.Linear(128, 2, bias=False)
-        self.fclogits = nn.Linear(128, 10, bias=False)
+        self.device = device
+        self.fcmu = nn.Linear(128, 2, bias=False).to(device)
+        self.fcvar = nn.Linear(128, 2, bias=False).to(device)
+        self.fclogits = nn.Linear(128, 10, bias=False).to(device)
         
 
 
     def forward(self, x):
         output = self.main(x)
-        disc_logits, mu, var = self.fclogits(output), self.fcmu(output), self.fcvar(output)
+        disc_logits, mu, var = self.fclogits(output), self.fcmu(output), torch.exp(self.fcvar(output))
         # output channel would be 10, 2, 2 for disc, mu, var
-
         return disc_logits, mu, var

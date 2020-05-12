@@ -47,19 +47,19 @@ plt.savefig('Training Images {}'.format(params['dataset']))
 plt.close('all')
 
 # Initialise the network.
-netG = Generator().to(device)
+netG = Generator(device).to(device)
 netG.apply(weights_init)
 print(netG)
 
-discriminator = Discriminator().to(device)
+discriminator = Discriminator(device).to(device)
 discriminator.apply(weights_init)
 print(discriminator)
 
-netD = DHead().to(device)
+netD = DHead(device).to(device)
 netD.apply(weights_init)
 print(netD)
 
-netQ = QHead().to(device)
+netQ = QHead(device).to(device)
 netQ.apply(weights_init)
 print(netQ)
 
@@ -71,8 +71,8 @@ criterionQ_dis = nn.CrossEntropyLoss()
 criterionQ_con = NormalNLLLoss()
 
 # Adam optimiser is used.
-optimD = optim.Adam([{'params': discriminator.parameters()}, {'params': netD.parameters()}], lr=params['learning_rate'], betas=(params['beta1'], params['beta2']))
-optimG = optim.Adam([{'params': netG.parameters()}, {'params': netQ.parameters()}], lr=params['learning_rate'], betas=(params['beta1'], params['beta2']))
+optimD = optim.Adam([{'params': discriminator.parameters()}, {'params': netD.parameters()}], lr=params['learning_rateD'], betas=(params['beta1'], params['beta2']))
+optimG = optim.Adam([{'params': netG.parameters()}, {'params': netQ.parameters()}], lr=params['learning_rateG'], betas=(params['beta1'], params['beta2']))
 
 # Fixed Noise
 z = torch.randn(100, params['num_z'], 1, 1, device=device)
@@ -162,7 +162,6 @@ for epoch in range(params['num_epochs']):
         con_loss = 0
         if (params['num_con_c'] != 0):
             con_loss = criterionQ_con(noise[:, params['num_z']+ params['num_dis_c']*params['dis_c_dim'] : ].view(-1, params['num_con_c']), q_mu, q_var)*0.1
-
         # Net loss for generator.
         G_loss = gen_loss + dis_loss + con_loss
         # Calculate gradients.
