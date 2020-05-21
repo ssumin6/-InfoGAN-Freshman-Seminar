@@ -55,11 +55,11 @@ discriminator = Discriminator().to(device)
 discriminator.apply(weights_init)
 print(discriminator)
 
-netD = DHead(device).to(device)
+netD = DHead().to(device)
 netD.apply(weights_init)
 print(netD)
 
-netQ = QHead(device).to(device)
+netQ = QHead().to(device)
 netQ.apply(weights_init)
 print(netQ)
 
